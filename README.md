@@ -26,6 +26,7 @@ Em outras palavras: é um sistema tipográfico completo que transforma a sua cal
 - ✏️ **Estúdio de Caligrafia:** Um canvas responsivo e sensível ao toque para o usuário desenhar cada letra do alfabeto, uma por uma, com a solenidade de um calígrafo medieval — ou com a pressa de quem está atrasado para o almoço.
 - 🖨️ **Máquina de Escrever:** Uma textarea com linhas de caderno onde o usuário digita o texto dos seus sonhos, que será renderizado com os garranchos que ele acabou de cometer.
 - 📄 **Exportação PDF (@react-pdf/renderer):** Documento A4 pautado onde cada caractere é uma `<Image>` do traço desenhado. O resultado é um PDF que parece ter sido escrito à mão — porque tecnicamente foi.
+- 💾 **Salvar e Carregar Fonte (.garrancho):** Exporte sua obra-prima tipográfica como um arquivo `.garrancho` e carregue-a em outro dispositivo, outro navegador, outro continente. Ideal para apresentações, compartilhamento entre amigos, ou para quando você finalmente desenhar um "R" que não pareça um "P" bêbado e quiser preservar esse momento histórico para a posteridade.
 - 🎨 **Seletor de Cor e Espessura:** Porque a caligrafia ruim merece ser colorida. Escolha entre tinta nanquim, caneta Bic azul, a temida caneta vermelha do professor, entre outras.
 - 🦆 **O Pato Faz Quack:** Easter egg no patinho do cabeçalho — clique nele e, com uma chance aleatória de ~18%, ele emitirá um grasnado sintetizado via Web Audio API. São 10 variantes sonoras. Boa sorte encontrando todas.
 - 🌙 **Tema Claro/Escuro:** Porque garranchos ficam igualmente feios sob qualquer iluminação, mas pelo menos seus olhos agradecem.
@@ -36,6 +37,7 @@ Em outras palavras: é um sistema tipográfico completo que transforma a sua cal
 | **Galeria de Progresso** | Grid com as 26 letras — as conquistadas exibem o traço salvo; as pendentes esperam com a paciência de um professor corrigindo provas. |
 | **Preview em Tempo Real** | Enquanto você digita, um preview mostra como ficará cada caractere usando suas letras desenhadas. |
 | **Geração de PDF** | `@react-pdf/renderer` com `flexDirection: 'row'` e `flexWrap: 'wrap'` para quebra de linha natural em folha A4 pautada. |
+| **Salvar/Carregar Fonte** | Export/import do dicionário de letras como arquivo `.garrancho` (JSON com metadados). Validação de estrutura na importação + confirmação antes de sobrescrever. |
 | **Sintetizador de Quacks** | Web Audio API gerando grasnados com osciladores e filtros passa-banda. Zero arquivos de áudio. Puro código. Pura ciência. Puro pato. |
 
 ---
@@ -70,6 +72,7 @@ O ecossistema escolhido garante que, enquanto o usuário rabisca com a delicadez
 | ✏️ **1. Estúdio** | O usuário desenha cada letra (A–Z) no canvas, com todo o cuidado de quem está assinando um cheque... ou com a negligência de quem está rabiscando na margem do caderno durante a aula. |
 | 💾 **2. Salvar** | Ao clicar em "Salvar Letra", o traço é capturado como PNG transparente em Base64 e armazenado no dicionário global. A aplicação avança automaticamente para a próxima letra. |
 | 📋 **3. Galeria** | Um grid mostra todas as 26 letras — as preenchidas exibem o desenho; as vazias exibem a letra em cinza, esperando sua vez de ser arruinada. |
+| 📦 **3.5. Salvar/Carregar Fonte** | Na galeria, o usuário pode exportar todos os garranchos como um arquivo `.garrancho` ("Salvar Fonte") ou importar uma fonte previamente salva ("Carregar Fonte"). Perfeito para apresentações ou para não perder aquele "S" que ficou *quase* legível. |
 | ⌨️ **4. Digitar** | Na aba "Máquina de Escrever", o usuário digita o texto desejado. Um preview mostra em tempo real como ficará com os garranchos. |
 | 📄 **5. PDF** | O botão glorioso gera um PDF A4 pautado onde cada caractere é uma imagem do traço desenhado. Espaços viram `<View>`s vazios. Pontuação fica como texto. Letras não desenhadas viram quadrados cinza da vergonha. |
 
@@ -120,15 +123,16 @@ garranchito/
     ├── index.css                   # Design system completo (light/dark, caderno, animações)
     ├── App.jsx                     # Layout principal, abas, toasts
     ├── context/
-    │   └── GarranchitoContext.jsx   # Cérebro: dicionário de letras, tema, navegação
+    │   └── GarranchitoContext.jsx   # Cérebro: dicionário de letras, tema, navegação, load/save
     ├── components/
     │   ├── Header.jsx              # Logo, título, toggle de tema, O PATO QUE FAZ QUACK
-    │   ├── CanvasStudio.jsx        # Estúdio: canvas, cores, espessura, salvar/desfazer
+    │   ├── CanvasStudio.jsx        # Estúdio: canvas, cores, espessura, salvar/desfazer, import/export de fonte
     │   ├── LetterGallery.jsx       # Grid das 26 letras (progresso visual)
     │   ├── TypewriterSection.jsx   # Máquina: textarea, preview, BOTÃO GLORIOSO do PDF
     │   ├── PdfDocument.jsx         # @react-pdf/renderer: Document → Page → Image por caractere
     │   └── Toast.jsx               # Notificações animadas
     └── utils/
+        ├── fontSerializer.js       # Export/import de fontes .garrancho (JSON com validação)
         └── quackSynth.js           # Sintetizador de grasnados via Web Audio API (10 variantes)
 ```
 
