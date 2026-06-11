@@ -155,6 +155,8 @@ Ao clicar no emoji 🦆 do cabeçalho, existe uma chance de **~18% por clique** 
 
 A imprevisibilidade é o ponto. Pode ser no primeiro clique. Pode ser no décimo quinto. O pato não te deve explicações.
 
+**OBS: Ainda não achei um jeito melhor dos "grasnados" parecerem realmente grasnados, então vamos nos contentar por enquanto nos barulhinhos que ele faz, ok?**
+
 ---
 
 ## 📜 Licença
