@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useMemo } from 'react';
 import { ReactSketchCanvas } from 'react-sketch-canvas';
 import { useGarranchito, ALPHABET } from '../context/GarranchitoContext';
 import LetterGallery from './LetterGallery';
@@ -19,14 +19,48 @@ import { exportFont, importFont } from '../utils/fontSerializer';
  * Depois, avanço automaticamente para a próxima letra não preenchida.
  */
 
+/**
+ * Eu sou o mapa de cores do Garranchito — cada cor tem um hex, um nome,
+ * e um tooltip engraçado que aparece ao passar o mouse. Porque até a
+ * paleta de cores merece personalidade.
+ */
 const STROKE_COLORS = [
-  '#1c1917', // Preto (tinta nanquim)
-  '#3b82f6', // Azul (caneta Bic)
-  '#ef4444', // Vermelho (caneta vermelha do professor)
-  '#16a34a', // Verde
-  '#8b5cf6', // Roxo
-  '#f97316', // Laranja
+  {
+    hex: '#1c1917',
+    darkHex: '#f5f5f4',
+    name: 'Preto',
+    tooltip: 'Tinta nanquim do calígrafo medieval',
+    darkTooltip: 'É preto, mas parece branco no tema escuro — estética > lógica 🌙',
+  },
+  {
+    hex: '#3b82f6',
+    name: 'Azul',
+    tooltip: 'A clássica caneta Bic que some da sua mesa',
+  },
+  {
+    hex: '#ef4444',
+    name: 'Vermelho',
+    tooltip: 'A temida caneta vermelha do professor 😰',
+  },
+  {
+    hex: '#16a34a',
+    name: 'Verde',
+    tooltip: 'Pra quem quer fingir que é ecologicamente correto',
+  },
+  {
+    hex: '#8b5cf6',
+    name: 'Roxo',
+    tooltip: 'Realeza. Seus garranchos merecem nobreza 👑',
+  },
+  {
+    hex: '#f97316',
+    name: 'Laranja',
+    tooltip: 'Marca-texto que passou dos limites',
+  },
 ];
+
+/** A cor "preta" original — usada para detectar se preciso trocar no dark mode */
+const BLACK_HEX = STROKE_COLORS[0].hex;
 
 export default function CanvasStudio({ onToast }) {
   const canvasRef = useRef(null);
@@ -45,10 +79,24 @@ export default function CanvasStudio({ onToast }) {
     theme,
   } = useGarranchito();
 
-  const [strokeColor, setStrokeColor] = useState(STROKE_COLORS[0]);
+  const [strokeColor, setStrokeColor] = useState(STROKE_COLORS[0].hex);
   const [strokeWidth, setStrokeWidth] = useState(5);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  /**
+   * Eu calculo a cor efetiva do traço — se estamos no tema escuro
+   * e a cor selecionada é preta (#1c1917), troco por um quase-branco
+   * para que o traço fique visível no canvas escuro.
+   * A cor salva no dicionário continua sendo a original (preta).
+   */
+  const isDarkBlack = theme === 'dark' && strokeColor === BLACK_HEX;
+  const effectiveStrokeColor = useMemo(() => {
+    if (isDarkBlack) {
+      return STROKE_COLORS[0].darkHex;
+    }
+    return strokeColor;
+  }, [strokeColor, isDarkBlack]);
 
   /**
    * Eu limpo completamente o canvas, apagando todos os traços.
@@ -225,7 +273,7 @@ export default function CanvasStudio({ onToast }) {
             <ReactSketchCanvas
               ref={canvasRef}
               strokeWidth={strokeWidth}
-              strokeColor={strokeColor}
+              strokeColor={effectiveStrokeColor}
               canvasColor="transparent"
               style={{
                 border: 'none',
@@ -243,15 +291,15 @@ export default function CanvasStudio({ onToast }) {
           <div className="relative">
             <button
               onClick={() => setShowColorPicker(!showColorPicker)}
-              className="btn-icon"
+              className={`btn-icon ${isDarkBlack ? 'wiggle-pulse' : ''}`}
               aria-label="Escolher cor do traço"
-              title="Cor do traço"
+              title={isDarkBlack ? '🌙 Preto invertido — clique para ver as opções!' : 'Cor do traço'}
               id="color-picker-toggle"
             >
               <Palette size={18} />
               <span
                 className="absolute bottom-1 right-1 w-3 h-3 rounded-full border border-white"
-                style={{ backgroundColor: strokeColor }}
+                style={{ backgroundColor: effectiveStrokeColor }}
               />
             </button>
             {showColorPicker && (
@@ -263,21 +311,31 @@ export default function CanvasStudio({ onToast }) {
                   boxShadow: 'var(--shadow-lg)',
                 }}
               >
-                {STROKE_COLORS.map(color => (
-                  <button
-                    key={color}
-                    onClick={() => {
-                      setStrokeColor(color);
-                      setShowColorPicker(false);
-                    }}
-                    className="w-7 h-7 rounded-full border-2 transition-transform hover:scale-110"
-                    style={{
-                      backgroundColor: color,
-                      borderColor: color === strokeColor ? 'var(--accent-primary)' : 'transparent',
-                    }}
-                    aria-label={`Cor ${color}`}
-                  />
-                ))}
+                {STROKE_COLORS.map(colorObj => {
+                  const displayColor = (theme === 'dark' && colorObj.hex === BLACK_HEX)
+                    ? colorObj.darkHex
+                    : colorObj.hex;
+                  const tooltip = (theme === 'dark' && colorObj.darkTooltip)
+                    ? colorObj.darkTooltip
+                    : colorObj.tooltip;
+
+                  return (
+                    <button
+                      key={colorObj.hex}
+                      onClick={() => {
+                        setStrokeColor(colorObj.hex);
+                        setShowColorPicker(false);
+                      }}
+                      className="w-7 h-7 rounded-full border-2 transition-transform hover:scale-110"
+                      style={{
+                        backgroundColor: displayColor,
+                        borderColor: colorObj.hex === strokeColor ? 'var(--accent-primary)' : 'transparent',
+                      }}
+                      aria-label={colorObj.name}
+                      title={tooltip}
+                    />
+                  );
+                })}
               </div>
             )}
           </div>
