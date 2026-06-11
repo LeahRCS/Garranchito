@@ -94,6 +94,26 @@ export function GarranchitoProvider({ children }) {
   }, []);
 
   /**
+   * Eu carrego uma fonte inteira de uma vez — substituindo
+   * todas as letras atuais pelas importadas de um arquivo .garrancho.
+   * Também reseto o índice para a primeira letra não preenchida.
+   */
+  const loadFont = useCallback((newLetters) => {
+    setLetters(newLetters);
+    const firstEmpty = ALPHABET.findIndex(l => !newLetters[l]);
+    setCurrentLetterIndex(firstEmpty === -1 ? 0 : firstEmpty);
+  }, []);
+
+  /**
+   * Eu limpo todas as letras de uma vez — um reset completo
+   * do dicionário. Útil para começar do zero.
+   */
+  const clearAllLetters = useCallback(() => {
+    setLetters({});
+    setCurrentLetterIndex(0);
+  }, []);
+
+  /**
    * Eu calculo o progresso: quantas letras já foram desenhadas
    * dividido pelo total do alfabeto.
    */
@@ -109,6 +129,8 @@ export function GarranchitoProvider({ children }) {
     saveLetter,
     goToLetter,
     removeLetter,
+    loadFont,
+    clearAllLetters,
     progress,
     completedCount,
     alphabet: ALPHABET,

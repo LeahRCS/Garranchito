@@ -2,7 +2,8 @@ import { useRef, useState, useCallback } from 'react';
 import { ReactSketchCanvas } from 'react-sketch-canvas';
 import { useGarranchito, ALPHABET } from '../context/GarranchitoContext';
 import LetterGallery from './LetterGallery';
-import { Eraser, Undo2, Save, RotateCcw, Palette } from 'lucide-react';
+import { Eraser, Undo2, Save, RotateCcw, Palette, Download, Upload } from 'lucide-react';
+import { exportFont, importFont } from '../utils/fontSerializer';
 
 /**
  * Eu sou o Estúdio de Caligrafia — o coração criativo do Garranchito.
@@ -29,6 +30,7 @@ const STROKE_COLORS = [
 
 export default function CanvasStudio({ onToast }) {
   const canvasRef = useRef(null);
+  const fileInputRef = useRef(null);
   const {
     letters,
     currentLetterIndex,
@@ -36,6 +38,7 @@ export default function CanvasStudio({ onToast }) {
     saveLetter,
     goToLetter,
     removeLetter,
+    loadFont,
     progress,
     completedCount,
     totalLetters,
@@ -105,6 +108,65 @@ export default function CanvasStudio({ onToast }) {
     canvasRef.current?.clearCanvas();
     onToast?.(`Letra "${letter.toUpperCase()}" removida. Desenhe de novo! ✏️`, 'info');
   }, [removeLetter, goToLetter, onToast]);
+
+  /**
+   * Eu exporto todas as letras desenhadas como um arquivo .garrancho
+   * para que o usuário possa salvar sua fonte e usá-la depois.
+   */
+  const handleSaveFont = useCallback(() => {
+    if (completedCount === 0) return;
+
+    try {
+      const { blob, filename } = exportFont(letters);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      onToast?.(`Fonte salva com ${completedCount} letras! 💾🦆`, 'success');
+    } catch (error) {
+      console.error('Erro ao salvar fonte:', error);
+      onToast?.('Erro ao salvar a fonte 😢', 'error');
+    }
+  }, [letters, completedCount, onToast]);
+
+  /**
+   * Eu leio o arquivo .garrancho selecionado pelo usuário,
+   * valido o conteúdo, e carrego as letras no dicionário global.
+   * Se já existem letras desenhadas, peço confirmação antes.
+   */
+  const handleLoadFont = useCallback(async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Reseto o input para permitir selecionar o mesmo arquivo novamente
+    event.target.value = '';
+
+    try {
+      const { letters: importedLetters, count } = await importFont(file);
+
+      // Se já tem letras, peço confirmação
+      if (completedCount > 0) {
+        const confirmed = window.confirm(
+          `Você já tem ${completedCount} letra(s) desenhada(s). ` +
+          `Carregar esta fonte vai substituir tudo pelas ${count} letras do arquivo. ` +
+          `Deseja continuar?`
+        );
+        if (!confirmed) return;
+      }
+
+      loadFont(importedLetters);
+      canvasRef.current?.clearCanvas();
+      onToast?.(`Fonte carregada! ${count} letras importadas 📂`, 'success');
+    } catch (error) {
+      console.error('Erro ao carregar fonte:', error);
+      onToast?.(error.message || 'Erro ao carregar a fonte 😢', 'error');
+    }
+  }, [completedCount, loadFont, onToast]);
 
   return (
     <div className="space-y-6">
@@ -276,7 +338,7 @@ export default function CanvasStudio({ onToast }) {
 
       {/* ─── Galeria de Letras ─── */}
       <div className="mt-6">
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex flex-wrap items-center gap-2 mb-3">
           <h2
             className="text-lg font-bold"
             style={{ fontFamily: 'var(--font-handwriting)', color: 'var(--text-primary)' }}
@@ -294,6 +356,44 @@ export default function CanvasStudio({ onToast }) {
               {completedCount} salva{completedCount !== 1 ? 's' : ''}
             </span>
           )}
+
+          {/* ─── Botões Salvar/Carregar Fonte ─── */}
+          <div className="flex gap-2 ml-auto">
+            <button
+              onClick={handleSaveFont}
+              disabled={completedCount === 0}
+              className="btn-secondary flex items-center gap-1.5 text-xs"
+              aria-label="Salvar fonte como arquivo"
+              title="Salvar todos os garranchos como arquivo .garrancho"
+              id="btn-save-font"
+            >
+              <Download size={14} />
+              <span className="hidden sm:inline">Salvar Fonte</span>
+              <span className="sm:hidden">Salvar</span>
+            </button>
+
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="btn-secondary flex items-center gap-1.5 text-xs"
+              aria-label="Carregar fonte de um arquivo"
+              title="Carregar garranchos de um arquivo .garrancho"
+              id="btn-load-font"
+            >
+              <Upload size={14} />
+              <span className="hidden sm:inline">Carregar Fonte</span>
+              <span className="sm:hidden">Carregar</span>
+            </button>
+
+            {/* Input oculto para seleção de arquivo */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".garrancho,.json"
+              onChange={handleLoadFont}
+              className="hidden"
+              aria-hidden="true"
+            />
+          </div>
         </div>
         <LetterGallery
           onLetterClick={handleLetterClick}
